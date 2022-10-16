@@ -1,4 +1,12 @@
 import c4d
+import json
+import subprocess
+
+
+def copy2clip(txt):
+    cmd = 'echo '+txt.strip()+'|pbcopy'
+    return subprocess.check_call(cmd, shell=True)
+
 
 # The active document
 doc: c4d.documents.BaseDocument
@@ -29,15 +37,17 @@ class ScaleDialog(c4d.gui.GeDialog):
             self.AddStaticText(0, c4d.BFH_LEFT, name="Scale:")
             self.AddEditSlider(self.ID_EDIT_NUMBER, c4d.BFH_SCALEFIT)
         self.GroupEnd()
-        
-        self.AddCheckbox(self.ID_EDIT_BOOL, c4d.BFV_CENTER, 200, 20, "World Coordinates")
+
+        self.AddCheckbox(self.ID_EDIT_BOOL, c4d.BFV_CENTER,
+                         200, 20, "World Coordinates")
 
         self.AddDlgGroup(c4d.DLG_OK | c4d.DLG_CANCEL)
 
         return True
 
     def InitValues(self):
-        self.SetFloat(self.ID_EDIT_NUMBER, float(self.defaultValue), min=0.0, max=1000.0)
+        self.SetFloat(self.ID_EDIT_NUMBER, float(
+            self.defaultValue), min=0.0, max=1000.0)
         self.SetBool(self.ID_EDIT_BOOL, bool(self.defaultWorld))
         return True
 
@@ -85,7 +95,19 @@ def main():
             y = float(f'{(pt.y+offset.y)*scale:.3f}')
             z = float(f'{(pt.z+offset.z)*scale:.3f}')
             absPts.append([x, y, z])
-        print(absPts)
+        data = json.dumps({
+            'name': op.GetName(),
+            'points': absPts,
+            'tension': 0.5,
+            'closed': op.IsClosed(),
+            'subdivide': 50,
+            'type': 'catmullrom'
+        }, sort_keys=False, indent=2)
+        print(data)
+
+        dataStr = json.dumps(data)
+        copy2clip(dataStr)
+        c4d.gui.MessageDialog("Spline JSON copied!")
     else:
         c4d.gui.MessageDialog("Please select a Spline")
 
